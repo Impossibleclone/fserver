@@ -1,0 +1,42 @@
+# Binaries
+/server
+/server-gui
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories
+vendor/
+
+# Security - NEVER COMMIT THESE
+cert.pem
+key.pem
+
+# Logs
+*.log
+server_audit.log
+
+# Uploaded Files / Storage
+/data/
+
+# OS Specific
+.DS_Store
+Thumbs.db
+
+# LaTeX generated files
+*.aux
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.out
+*.toc
+# Ignore the generated PDF so it doesn't clutter git history, but you can remove this if you want to commit the final PDF
+*.pdf

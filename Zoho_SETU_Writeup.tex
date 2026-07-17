@@ -1,0 +1,348 @@
+\documentclass[12pt, a4paper]{article}
+
+% --- PREAMBLE ---
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern} 
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr} 
+\usepackage{tcolorbox}
+\usepackage{graphicx} % For UI screenshots
+
+% --- COLOR DEFINITIONS ---
+\definecolor{primaryblue}{RGB}{0, 77, 153}
+\definecolor{darkgray}{RGB}{60, 60, 60}
+\definecolor{keywordcolor}{rgb}{0.0, 0.5, 0.0} 
+\definecolor{commentcolor}{rgb}{0.4, 0.7, 0.8} 
+\definecolor{stringcolor}{rgb}{0.6, 0.1, 0.1}  
+\definecolor{textcolor}{rgb}{0.15, 0.15, 0.15} 
+
+% --- PAGE HEADER & FOOTER ---
+\pagestyle{fancy}
+\fancyhf{} 
+\fancyhead[L]{\textcolor{darkgray}{\small Zoho SETU Project}}
+\fancyhead[R]{\textcolor{darkgray}{\small Ayush Jaiswal}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% --- SECTION STYLING ---
+\titleformat{\section}
+  {\sffamily\Large\bfseries\color{primaryblue}}
+  {\thesection}{1em}{}[{\titlerule[0.8pt]}]
+  
+\titleformat{\subsection}
+  {\sffamily\large\bfseries\color{primaryblue!80!black}}
+  {\thesubsection}{1em}{}
+
+% --- CODE BLOCK STYLING ---
+\lstset{
+    language=Go, 
+    basicstyle=\ttfamily\small\color{textcolor},
+    keywordstyle=\color{keywordcolor}\bfseries,
+    commentstyle=\color{commentcolor}\itshape,
+    stringstyle=\color{stringcolor},
+    showstringspaces=false,
+    breaklines=true,
+    frame=none,             
+    backgroundcolor=,       
+    tabsize=4,
+    captionpos=b,
+    numbers=none,           
+    aboveskip=1.5em,
+    belowskip=1.5em
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    pdftitle={Zoho SETU Project Write-up},
+    pdfauthor={Ayush Jaiswal}
+}
+
+\begin{document}
+
+% ==========================================
+% PAGE 1: TITLE PAGE
+% ==========================================
+\begin{titlepage}
+    \vspace*{\fill}
+    \begin{center}
+        {\Large\sffamily\color{darkgray} ZOHO CORPORATION PVT. LTD.}\\[0.5cm]
+        \rule{0.8\textwidth}{1.5pt}\\[0.8cm]
+        
+        {\Huge \sffamily\bfseries\color{primaryblue} SETU Project Write-up\par}
+        \vspace{0.5cm}
+        {\Large \itshape Technical Engineering Documentation\par}
+        
+        \vspace{0.8cm}
+        \rule{0.8\textwidth}{1.5pt}\\[2cm]
+        
+        \textbf{\large Submitted By:}\\[0.2cm]
+        Ayush Jaiswal\\
+        B.E. Information Technology\\
+        SSGMCE, Shegaon\\
+        \href{https://github.com/impossibleclone}{github.com/impossibleclone}\\[1cm]
+        
+        \textbf{\large Domain:}\\[0.2cm]
+        Software Engineering\\
+        Systems Development\\[2.5cm]
+        
+        \begin{tcolorbox}[colback=white, colframe=primaryblue, boxrule=0.5pt, arc=4pt, left=15pt, right=15pt, top=10pt, bottom=10pt, width=0.85\textwidth, halign=center]
+            \textbf{\large Abstract}\\[0.3cm]
+            This document outlines the architecture, core logic, and implementation details of the Zoho SETU file server project. It serves as a comprehensive technical guide detailing the engineering principles applied to develop a highly concurrent, thread-safe, and secure cross-platform enterprise file management system. The report highlights the integration of a Virtual File System (VFS), granular concurrency controls, and a robust security stack, demonstrating a focus on performance and strict system design over mere visual aesthetics.
+        \end{tcolorbox}
+    \end{center}
+    \vspace*{\fill} 
+\end{titlepage}
+
+\newpage
+% ==========================================
+% PAGE 2: TABLE OF CONTENTS
+% ==========================================
+\tableofcontents
+
+\newpage
+% ==========================================
+% PAGE 3: INTRODUCTION & PROJECT STRUCTURE
+% ==========================================
+\section{Introduction}
+The Zoho SETU File Server project was initiated to design and implement a robust, cross-platform server application capable of secure, multi-user file management. Driven by the necessity for strong system design over mere visual aesthetics, this project delivers a highly concurrent, thread-safe backend coupled with a dedicated Server Administrator GUI and a modern Web Client interface. The primary objective is to abstract the complexities of file storage, network security, and user authentication into a unified, high-performance Go application.
+
+\section{Project Overview and Structure}
+To maintain a high standard of maintainability and adherence to software engineering best practices, the codebase strictly follows the Standard Go Project Layout. This enforces a clean separation of concerns. Below is the exact directory tree mapping the architecture of the system:
+
+\begin{verbatim}
+fserver/
+|-- cmd/
+|   |-- server/
+|   |   `-- main.go          (CLI Entrypoint)
+|   `-- server-gui/
+|       `-- main.go          (Fyne Desktop GUI Entrypoint)
+|-- internal/
+|   |-- auth/
+|   |   `-- auth.go          (bcrypt Hashing & User State)
+|   |-- config/
+|   |   `-- config.go        (Environment & Port configuration)
+|   |-- handler/
+|   |   `-- handler.go       (HTTP Routes & Web UI Templates)
+|   |-- security/
+|   |   `-- tls.go           (Automated Certificate Generation)
+|   `-- server/
+|       `-- server.go        (Middleware & HTTP Multiplexer)
+|   `-- storage/
+|       |-- lock.go          (Mutex Concurrency Control)
+|       `-- storage.go       (Virtual File System Interface)
+|-- go.mod
+`-- go.sum
+\end{verbatim}
+
+\newpage
+% ==========================================
+% PAGE 4: LANGUAGE RESEARCH & SELECTION
+% ==========================================
+\section{Research: Language and Framework Selection}
+During the architectural research phase, the foundational programming language was heavily debated. The system required extreme performance, native compilation, and robust networking capabilities.
+
+\subsection{Language Selection}
+\textbf{Alternatives Considered:} C, C++, and Java.\\
+\textbf{Decision:} Go (Golang).\\
+\textbf{Rationale:} While traditional systems languages like C and C++ offer concrete, low-level execution speed, developing a secure, multi-user web server in those languages requires manual memory management, which is notoriously prone to human error (e.g., buffer overflows). Java, on the other hand, requires a heavy runtime environment (JVM). 
+
+Go was selected because it perfectly bridges this gap. It compiles down to a single, statically linked native binary for Linux, Windows, and macOS, providing the raw execution speed of C, but with modern memory safety (garbage collection). Furthermore, Go is purpose-built for networked systems; it utilizes lightweight "Goroutines" to multiplex thousands of concurrent file uploads and downloads onto a small pool of OS threads effortlessly.
+
+\subsection{GUI Framework Selection}
+\textbf{Alternatives Considered:} Node.js with Electron, or Qt.\\
+\textbf{Decision:} The Fyne Toolkit.\\
+\textbf{Rationale:} Web-based frameworks like Electron were rejected due to their massive RAM footprint. Fyne was selected because it leverages OpenGL for hardware-accelerated rendering and compiles directly into the Go binary. This means the Server GUI runs natively and efficiently across all operating systems without requiring the system administrator to install any external dependencies or runtimes.
+
+\newpage
+% ==========================================
+% PAGE 5: CONCURRENCY & STORAGE ARCHITECTURE
+% ==========================================
+\section{Architectural Decisions: Storage and Concurrency}
+
+\subsection{Concurrency Model: Granular vs. Global Locking}
+\textbf{Alternative Considered:} A single global \texttt{sync.Mutex} locking the entire server during any file read or write.
+
+\textbf{Decision \& Rationale:} A global lock would severely bottleneck the server, causing all users to queue up and wait while a single large file is being uploaded. To solve this, a highly granular \texttt{FileLocker} mechanism was engineered. The system tracks active operations using a dynamic map of \texttt{sync.RWMutex} instances bound specifically to individual file paths. 
+
+This allows thousands of users to download and upload different files simultaneously without blocking each other. The \texttt{RWMutex} (Read/Write Mutex) further optimizes this by allowing multiple users to read (download) the \emph{same} file concurrently, only establishing an exclusive lock when a user is actively writing (uploading or deleting) that specific file.
+
+\subsection{Storage Abstraction: The VFS Pattern}
+\textbf{Alternative Considered:} Writing direct \texttt{os.Create} and \texttt{os.Open} OS-level calls inside the HTTP handlers.
+
+\textbf{Decision \& Rationale:} Tying HTTP network logic directly to the local hard drive violates the Single Responsibility Principle and makes the system rigid. By forcing the network handlers to communicate through a Virtual File System (VFS) interface, the system achieves strict "Storage Agnosticism". 
+
+While the current deployment utilizes the \texttt{LocalFS} struct to write to the local disk, the architecture allows the server to be instantly upgraded to use AWS S3, Google Cloud Storage, or a database. This is achieved by simply injecting a new struct that satisfies the VFS interface, completely negating the need to rewrite a single line of the HTTP routing logic.
+
+\newpage
+% ==========================================
+% PAGE 6: SECURITY STACK
+% ==========================================
+\section{Architectural Decisions: Security Stack}
+Security is the most paramount requirement of a networked file server. The system was designed with a defense-in-depth approach, protecting data at rest, data in transit, and access controls.
+
+\subsection{Password Security: bcrypt Hashing}
+\textbf{Alternative Considered:} Storing user passwords in plaintext, or using outdated, fast hashing algorithms like MD5 or SHA-1.
+
+\textbf{Decision \& Rationale:} Storing passwords in plaintext or MD5 leaves the system highly vulnerable to memory-dump attacks and rainbow tables. The system utilizes \texttt{bcrypt} for password hashing. \texttt{bcrypt} automatically generates a cryptographic salt for every user and utilizes a computationally expensive algorithm. This intentionally slows down the hashing process, making brute-force and dictionary attacks mathematically unfeasible for attackers, ensuring that even the server administrator cannot view the users' passwords.
+
+\subsection{Transport Encryption (TLS)}
+\textbf{Alternative Considered:} Utilizing standard HTTP for local network file transfers.
+
+\textbf{Decision \& Rationale:} Plain HTTP transmits files and passwords in cleartext, exposing the system to packet sniffing on local networks. To guarantee security out-of-the-box, a custom \texttt{security} module was written. Upon startup, the server automatically generates self-signed ECC (Elliptic Curve Cryptography) certificates (\texttt{cert.pem} and \texttt{key.pem}) if they do not exist. The server exclusively binds to \texttt{ListenAndServeTLS}, ensuring that all data in transit is encrypted via HTTPS.
+
+\subsection{Audit Logging Middleware}
+Accountability is maintained through an integrated Audit Logging Middleware. This interceptor wraps the core HTTP router. It validates the Basic Authentication credentials and then records every network interaction. The log captures the authenticated Username, IP Address, HTTP Method, Target File, Status Code, and Execution Duration. This is streamed to the GUI and persisted to \texttt{server\_audit.log}.
+
+\newpage
+% ==========================================
+% PAGE 7: USER INTERFACE DESIGN
+% ==========================================
+\section{User Interface Design}
+To provide a seamless experience, the system implements a Dual-Interface paradigm: A Desktop GUI for administrators, and a Web UI for end-users.
+
+\subsection{The Server Administrator GUI}
+Built natively using the Fyne toolkit, the Administrator GUI serves as the control center. It operates strictly on the host machine and does not act as a file client.
+\begin{itemize}
+    \item \textbf{Server Configuration Tab:} Allows the administrator to dynamically set the network port, define the Storage Directory, and monitor real-time server status logs.
+    \item \textbf{User Management Tab:} Provides a visual interface to provision new secure user accounts. It displays a live list of provisioned users, tracking their status as either \textbf{[ACTIVE]} or \textbf{[Offline]} based on their network request timestamps. Administrators can revoke access instantaneously via the "Delete Selected User" function.
+\end{itemize}
+
+% Note for student: Uncomment the lines below and place your actual screenshot in the folder to render it in the PDF.
+% \begin{center}
+%     \includegraphics[width=0.8\textwidth]{server_admin_gui.png}
+% \end{center}
+
+\subsection{The Embedded Web Client}
+\textbf{Rationale:} Requiring users to download a dedicated executable just to access files creates unnecessary friction. Instead, a responsive, Javascript-driven Web UI is embedded directly into the Go binary. 
+
+When users access the server's HTTPS IP address via their desktop browser or mobile device, they are greeted by a sleek, dark-themed dashboard. 
+\begin{itemize}
+    \item \textbf{Upload \& Progress:} Users can upload files securely. The UI utilizes \texttt{XMLHttpRequest} to provide real-time progress bars and network speed calculations (MB/s).
+    \item \textbf{Conflict Resolution:} If a user attempts to upload a file that already exists, the Web UI queries the server state and prompts the user with an Overwrite confirmation dialogue.
+    \item \textbf{Remote Admin Link:} If the master \texttt{admin} logs into the Web UI, the system dynamically reveals a hidden link to the \texttt{/admin} dashboard, allowing remote user management from a mobile device.
+\end{itemize}
+
+% Note for student: Uncomment the lines below and place your actual screenshot in the folder to render it in the PDF.
+% \begin{center}
+%     \includegraphics[width=0.8\textwidth]{web_client_ui.png}
+% \end{center}
+
+\newpage
+% ==========================================
+% PAGE 8: IMPLEMENTATION - VFS
+% ==========================================
+\section{Implementation Details: VFS}
+The following snippets highlight the core logic utilized in the system's most critical components.
+
+\subsection{Virtual File System Interface}
+The \texttt{VFS} interface dictates the contract for all storage interactions. The \texttt{SaveFile} method explicitly requires an \texttt{overwrite} boolean, pushing the conflict resolution logic down to the storage layer rather than cluttering the HTTP handlers.
+
+\begin{lstlisting}[language=Go]
+// storage/storage.go
+package storage
+
+import "io"
+
+// VFS defines the Virtual File System interface
+type VFS interface {
+    SaveFile(filename string, reader io.Reader, overwrite bool) error
+    GetFile(filename string) (io.ReadSeekCloser, error)
+    DeleteFile(filename string) error
+    ListFiles() ([]string, error)
+}
+\end{lstlisting}
+
+When implemented by \texttt{LocalFS}, the \texttt{GetFile} method returns a custom \texttt{lockedFile} struct. This struct wraps the standard \texttt{os.File}, overriding the \texttt{Close()} method to guarantee that the Mutex Read-Lock is safely released the moment the HTTP handler finishes transmitting the file.
+
+\begin{lstlisting}[language=Go]
+type lockedFile struct {
+	*os.File
+	locker   *FileLocker
+	filename string
+}
+
+func (lf *lockedFile) Close() error {
+	err := lf.File.Close()
+	lf.locker.UnlockRead(lf.filename) // Safely release lock on close
+	return err
+}
+\end{lstlisting}
+
+\newpage
+% ==========================================
+% PAGE 9: IMPLEMENTATION - CONCURRENCY
+% ==========================================
+\section{Implementation Details: Concurrency}
+
+\subsection{Thread-Safe File Locking Engine}
+To prevent data corruption during simultaneous network uploads, the \texttt{FileLocker} maintains a dynamic map of \texttt{RWMutex} instances linked to specific file paths. The outer \texttt{sync.Mutex} (\texttt{fl.mu}) is only used for a fraction of a millisecond to safely initialize or retrieve the specific file's lock, ensuring maximum throughput.
+
+\begin{lstlisting}[language=Go]
+// storage/lock.go
+package storage
+
+import "sync"
+
+type FileLocker struct {
+    mu    sync.Mutex
+    locks map[string]*sync.RWMutex
+}
+
+// LockWrite acquires an exclusive lock for a specific file
+func (fl *FileLocker) LockWrite(filename string) {
+    fl.mu.Lock()
+    if _, exists := fl.locks[filename]; !exists {
+        fl.locks[filename] = &sync.RWMutex{}
+    }
+    lock := fl.locks[filename]
+    fl.mu.Unlock()
+
+    lock.Lock() // Block other writes and reads for this file only
+}
+\end{lstlisting}
+
+\subsection{Authentication \& Logging Middleware}
+The system enforces strict access control through a decorator pattern (Middleware). This function wraps the core HTTP router, acting as a gatekeeper that validates bcrypt credentials and writes to the audit log before passing the request down the chain.
+
+\begin{lstlisting}[language=Go]
+// server/server.go
+authMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+        u, p, ok := r.BasicAuth()
+        
+        if !ok || s.authenticator.Authenticate(u, p) != nil {
+            w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+            http.Error(w, "Unauthorized", http.StatusUnauthorized)
+            s.logger.Printf("UNAUTHORIZED ACCESS from IP: %s", r.RemoteAddr)
+            return
+        }
+        
+        rw := &responseWriter{w, http.StatusOK}
+        next.ServeHTTP(rw, r) // Pass to actual handler
+        
+        s.logger.Printf("User: '%s' | Action: %s | Target: %s", u, r.Method, r.URL.Path)
+    }
+}
+\end{lstlisting}
+
+\newpage
+% ==========================================
+% PAGE 10: CONCLUSION
+% ==========================================
+\section{Conclusion}
+The Zoho SETU File Server successfully delivers an enterprise-grade backend prioritizing performance, security, and architectural integrity. By abstracting the storage layer through a Virtual File System and enforcing thread-safe concurrent access via granular mutex locking, the application scales predictably under heavy network load. 
+
+The deliberate choice of Go provided the concrete performance and static typing necessary for systems engineering, whilst entirely neutralizing the risk of memory vulnerabilities. Furthermore, the integration of \texttt{bcrypt} hashing, automated TLS certificate generation, and comprehensive audit logging fulfills the stringent security requirements of a modern networked application. 
+
+Future enhancements could include implementing OAuth 2.0 for external identity providers, transitioning the VFS to an S3-compatible backend for horizontal scaling across distributed clusters, and expanding the Fyne Administrator GUI to include graphical log analysis charts.
+
+\end{document}
