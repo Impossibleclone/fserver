@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Admin Panel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: #1e1e1e;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        input {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            background: #2c2c2c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .btn-danger {
+            background-color: #ff5252;
+            margin-left: 10px;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            color: #4CAF50;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Server Administration</h1>
+        <p><a href="/" style="color:#4DA8DA">Back to Files</a></p>
+
+        <div class="card">
+            <h3>Add New User</h3>
+            <input type="text" id="newUsername" placeholder="Username">
+            <input type="password" id="newPassword" placeholder="Password">
+            <button onclick="addUser()">Create Secure Account</button>
+        </div>
+
+        <div class="card">
+            <h3>Manage Users</h3>
+            <ul id="userList"></ul>
+        </div>
+    </div>
+
+    <script>
+        async function fetchUsers() {
+            const response = await fetch('/admin/users');
+            const users = await response.json();
+            const list = document.getElementById('userList');
+            list.innerHTML = '';
+            users.forEach(user => {
+                const li = document.createElement('li');
+                li.innerHTML = '<span>' + user + '</span>' +
+                    (user !== 'admin' ? '<button class="btn-danger" onclick="deleteUser(\'' + user + '\')">Revoke</button>' : '');
+                list.appendChild(li);
+            });
+        }
+
+        async function addUser() {
+            const u = document.getElementById('newUsername').value;
+            const p = document.getElementById('newPassword').value;
+            if (!u || !p) return;
+
+            const response = await fetch('/admin/users?username=' + encodeURIComponent(u) + '&password=' + encodeURIComponent(p), {method: 'POST'});
+            if (response.ok) {
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newPassword').value = '';
+                fetchUsers();
+            } else {
+                alert('Failed to add user');
+            }
+        }
+
+        async function deleteUser(username) {
+            if (!confirm('Revoke access for ' + username + '?')) return;
+            await fetch('/admin/users?username=' + encodeURIComponent(username), {method: 'DELETE'});
+            fetchUsers();
+        }
+
+        fetchUsers();
+    </script>
+</body>
+
+</html>
